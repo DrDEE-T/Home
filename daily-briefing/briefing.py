@@ -69,9 +69,7 @@ SOURCE: [publication name]
 HEADLINE: [article headline]
 PILLAR: [which of the three pillars this connects to — use exactly: Adoption failure, Workforce anxiety, or Governance]
 WHAT IT SAYS: [one to two sentences. Only what the source explicitly states.]
-WHY IT MATTERS: [one sentence. Must be grounded in the source, not general commentary.]
-ANGLE A: [a possible LinkedIn post angle DT could take, grounded strictly in what the source says. Write it from the perspective of someone who has sat in implementation rooms, watched pilots fail, and taught executives why. Do not write like a journalist or analyst. Write like a practitioner with receipts.]
-ANGLE B: [a second angle, different framing. DT teaches AI to healthcare, finance, legal, and nonprofit professionals. At least one angle per item should connect to one of those sectors if the source supports it. Same sourcing rule applies.]
+DT'S TAKE: [Write a 3 to 4 sentence paragraph in DT's voice. She is a practitioner, not a commentator. She has sat in implementation rooms, watched pilots stall, and trained professionals in healthcare, finance, legal, and nonprofit organizations on what AI actually requires. This paragraph should carry that weight. It should say something specific and true that a LinkedIn audience of practitioners would not have heard from a generic AI newsletter. Ground every sentence in what the source says. Do not invent claims. Do not use hype language. Do not use em dashes. Write like someone who has been in the room, not someone covering it from the outside.]
 
 If the item is not relevant to any pillar, respond with exactly: NOT_RELEVANT
 
@@ -244,10 +242,8 @@ Return ONLY a valid JSON array — no prose, no markdown fences. One object per 
     "SOURCE": "publication name",
     "HEADLINE": "article headline",
     "PILLAR": "Adoption failure",
-    "WHAT IT SAYS": "one to two sentences",
-    "WHY IT MATTERS": "one sentence",
-    "ANGLE A": "LinkedIn angle",
-    "ANGLE B": "second angle"
+    "WHAT IT SAYS": "one to two sentences from the source only",
+    "DT'S TAKE": "3 to 4 sentence paragraph in DT's practitioner voice"
   },
   {
     "item": 2,
@@ -390,8 +386,7 @@ def _format_entry(entry: dict) -> str:
         field("PILLAR"),
         field("WHAT IT SAYS"),
         field("WHY IT MATTERS"),
-        field("ANGLE A"),
-        field("ANGLE B"),
+        field("DT'S TAKE"),
         "",
     ]
     return "\n".join(p for p in parts if p is not None)
