@@ -70,8 +70,8 @@ HEADLINE: [article headline]
 PILLAR: [which of the three pillars this connects to — use exactly: Adoption failure, Workforce anxiety, or Governance]
 WHAT IT SAYS: [one to two sentences. Only what the source explicitly states.]
 WHY IT MATTERS: [one sentence. Must be grounded in the source, not general commentary.]
-ANGLE A: [a possible LinkedIn post angle DT could take, grounded strictly in what the source says. No assumptions.]
-ANGLE B: [a second possible angle, different framing, same sourcing rule.]
+ANGLE A: [a possible LinkedIn post angle DT could take, grounded strictly in what the source says. Write it from the perspective of someone who has sat in implementation rooms, watched pilots fail, and taught executives why. Do not write like a journalist or analyst. Write like a practitioner with receipts.]
+ANGLE B: [a second angle, different framing. DT teaches AI to healthcare, finance, legal, and nonprofit professionals. At least one angle per item should connect to one of those sectors if the source supports it. Same sourcing rule applies.]
 
 If the item is not relevant to any pillar, respond with exactly: NOT_RELEVANT
 
@@ -182,7 +182,7 @@ def run_web_searches(queries: list[str], client: Anthropic) -> list[dict]:
                                 "source": art.get("source_name", "Web Search"),
                                 "content": art.get("summary", ""),
                                 "published": "",
-                                "is_primary": False,
+                                "is_primary": True,
                                 "origin": "search",
                                 "search_query": query,
                             }
