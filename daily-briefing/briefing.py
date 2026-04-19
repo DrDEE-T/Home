@@ -433,7 +433,7 @@ def main() -> None:
 
     log.info("=== DT Daily AI Briefing starting ===")
     client = Anthropic(api_key=api_key)
-    run_date = datetime.now().strftime("%A, %B %-d")
+    run_date = datetime.now().strftime("%A, %B ") + str(datetime.now().day)
 
     # 1. Collect
     rss_primary = fetch_rss_feeds(config.RSS_FEEDS_PRIMARY, is_primary=True)
