@@ -6,21 +6,22 @@ RECIPIENT_EMAIL = "drdee20200@gmail.com"
 SEND_HOUR = 7  # 24-hour format; used only if running as daemon, not via cron
 
 RSS_FEEDS_PRIMARY = [
-    "https://openai.com/blog/rss.xml",
-    "https://www.anthropic.com/rss.xml",
+    "https://venturebeat.com/category/ai/feed/",
+    "https://techcrunch.com/category/artificial-intelligence/feed/",
+    "https://www.theverge.com/ai-artificial-intelligence/rss/index.xml",
+    "https://feeds.arstechnica.com/arstechnica/technology-lab",
+    "https://www.technologyreview.com/feed/",
+    "https://hbr.org/topic/technology/rss",
     "https://blog.google/technology/ai/rss/",
     "https://blogs.microsoft.com/ai/feed/",
     "https://blogs.nvidia.com/feed/",
-    "https://www.perplexity.ai/hub/blog/rss",
-    "https://hbr.org/topic/technology/rss",
-    "https://www.forbes.com/ai/feed/",
-    "https://www.technologyreview.com/feed/",
 ]
 
 RSS_FEEDS_SECONDARY = [
+    "https://openai.com/blog/rss.xml",
+    "https://www.anthropic.com/rss.xml",
     "https://ai.meta.com/blog/rss.xml",
     "https://machinelearning.apple.com/rss.xml",
-    "https://x.ai/blog/rss",  # skipped gracefully if unavailable
 ]
 
 SEARCH_QUERIES = [
