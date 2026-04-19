@@ -52,28 +52,57 @@ TOKEN_FILE = Path("token.json")
 # System prompt (verbatim from spec)
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are a research analyst for Dr. Denise Turley, an AI implementation practitioner and SVP of Technology, Data and AI at a national business association. She also teaches AI to professionals across healthcare, finance, legal, and nonprofit sectors. Her content authority is grounded in operational experience, not theory. Your job is to analyze each news item and produce a structured brief entry.
+FILTER_PROMPT = """You are screening news items for relevance to Dr. Denise Turley, an AI implementation practitioner. Screen each item against her three content pillars. Drop anything that does not clearly connect to at least one.
 
-Follow these rules without exception.
+Pillar 1. Adoption failure: why AI implementations stall, the role of mindset, culture, and organizational commitment.
+Pillar 2. Workforce anxiety: how AI affects jobs, skills, workplace behavior, and professional fears.
+Pillar 3. Governance: practical governance, responsible AI, compliance, and risk management inside real organizations.
 
-RELEVANCE SCORING: Score each item against these three pillars. Drop any item that does not clearly connect to at least one. Do not force relevance.
-Pillar 1. AI adoption failure: why implementations stall, the role of mindset, culture, and organizational commitment to change.
-Pillar 2. Workforce anxiety and job impact: how AI is affecting jobs, skills, workplace behavior, and professional fears.
-Pillar 3. AI governance inside real organizations: practical governance, responsible AI, compliance, and risk management in operations.
+Return ONLY a valid JSON array. One object per item in order:
+[
+  {
+    "item": 1,
+    "relevant": true,
+    "pillar": "Adoption failure",
+    "source": "publication name",
+    "headline": "article headline",
+    "summary": "one sentence: only what the source explicitly states"
+  },
+  {
+    "item": 2,
+    "relevant": false
+  }
+]
 
-EXTRACTION RULE: Only assert what the source explicitly states. No inferred motivations. No assumed timelines. No general claims dressed as insights. If the source does not say it, you do not include it. This rule protects the credibility of a practitioner whose authority depends on accuracy.
+Use exactly one of these pillar values: Adoption failure, Workforce anxiety, Governance.
+Do not force relevance. If it does not clearly fit, mark relevant: false."""
 
-OUTPUT FORMAT: For each relevant item produce exactly this structure and nothing else.
+SYNTHESIS_PROMPT = """You are the strategic content advisor for Dr. Denise Turley. She is an AI implementation practitioner and SVP of Technology, Data and AI at a national business association. She teaches AI to professionals in healthcare, finance, legal, and nonprofit sectors. Her LinkedIn audience expects practitioner insight, not commentary. They have already read the headlines.
 
-SOURCE: [publication name]
-HEADLINE: [article headline]
-PILLAR: [which of the three pillars this connects to — use exactly: Adoption failure, Workforce anxiety, or Governance]
-WHAT IT SAYS: [one to two sentences. Only what the source explicitly states.]
-DT'S TAKE: [Write a 3 to 4 sentence paragraph in DT's voice. She is a practitioner, not a commentator. She has sat in implementation rooms, watched pilots stall, and trained professionals in healthcare, finance, legal, and nonprofit organizations on what AI actually requires. This paragraph should carry that weight. It should say something specific and true that a LinkedIn audience of practitioners would not have heard from a generic AI newsletter. Ground every sentence in what the source says. Do not invent claims. Do not use hype language. Do not use em dashes. Write like someone who has been in the room, not someone covering it from the outside.]
+You have just reviewed today's relevant AI news items. Your job is to think across them — not summarize them — and make one decision: is there something worth DT's voice today?
 
-If the item is not relevant to any pillar, respond with exactly: NOT_RELEVANT
+DT does not post every day. She posts when she has something to say that her audience cannot get from a generic AI newsletter. That means:
+- A pattern the sources collectively reveal that practitioners are not naming yet
+- A specific failure mode she has seen in the room that today's data confirms
+- A governance or workforce insight with direct relevance to healthcare, finance, legal, or nonprofit professionals
 
-Do not editorialize. Do not add context the source did not provide. Do not use hype language. Do not use em dashes. This output feeds directly into content that carries DT's professional credibility."""
+If today's news is thin, repetitive, or covered adequately elsewhere, the recommendation is NO. That is a legitimate and valuable output.
+
+Return your response in exactly this structure:
+
+TODAY'S THEME
+[2 to 3 sentences. What is the dominant pattern across today's items? What are the sources collectively pointing at, taken together? Do not list the sources. Synthesize them.]
+
+POST RECOMMENDATION: [YES / NO / HOLD]
+
+REASONING
+[2 to 3 sentences. Why post or why not. Be specific. If NO, state what would need to be true for this to be worth posting. If HOLD, state what you are waiting for.]
+
+DRAFT POST
+[Only include if recommendation is YES. Write a 150 to 200 word LinkedIn post in DT's voice. First person. Practitioner perspective. Open with a specific observation, not a question. Cite the specific data points from today's sources. Connect to what this means for professionals in at least one of her sectors: healthcare, finance, legal, or nonprofit. Close with one sentence that only someone with implementation experience would write. No hype. No em dashes. No generic AI cheerleading.]
+
+REFERENCE ITEMS
+[Only include if recommendation is YES or HOLD. Bullet list of the 2 to 3 strongest source and headline combinations that back the theme. Format: Source: Headline]"""
 
 # ---------------------------------------------------------------------------
 # RSS collection
@@ -227,34 +256,10 @@ def _title_key(title: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Anthropic analysis — single batched call for all items
+# Stage 1: Filter items for pillar relevance (Haiku — cheap)
 # ---------------------------------------------------------------------------
 
-BATCH_SYSTEM_PROMPT = SYSTEM_PROMPT + """
-
-You will receive multiple numbered news items. Analyze each against the three pillars.
-
-Return ONLY a valid JSON array — no prose, no markdown fences. One object per item in order:
-[
-  {
-    "item": 1,
-    "relevant": true,
-    "SOURCE": "publication name",
-    "HEADLINE": "article headline",
-    "PILLAR": "Adoption failure",
-    "WHAT IT SAYS": "one to two sentences from the source only",
-    "DT'S TAKE": "3 to 4 sentence paragraph in DT's practitioner voice"
-  },
-  {
-    "item": 2,
-    "relevant": false
-  }
-]
-
-Use exactly one of these pillar values: Adoption failure, Workforce anxiety, Governance."""
-
-
-def analyze_all_items(items: list[dict], client: Anthropic) -> list[dict]:
+def filter_items(items: list[dict], client: Anthropic) -> list[dict]:
     if not items:
         return []
 
@@ -270,130 +275,206 @@ def analyze_all_items(items: list[dict], client: Anthropic) -> list[dict]:
     try:
         response = client.messages.create(
             model=config.ANALYSIS_MODEL,
-            max_tokens=config.MAX_TOKENS,
-            system=BATCH_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Analyze these {len(items)} news items:\n\n{numbered}"}],
+            max_tokens=3000,
+            system=FILTER_PROMPT,
+            messages=[{"role": "user", "content": f"Screen these {len(items)} items:\n\n{numbered}"}],
         )
         raw = response.content[0].text.strip()
         parsed = _extract_json_array(raw)
         if not parsed:
-            log.error("Could not parse batch analysis JSON")
+            log.error("Could not parse filter JSON")
             return []
 
         results = []
         for entry in parsed:
             if not entry.get("relevant"):
-                log.info("Not relevant: item %d", entry.get("item", "?"))
                 continue
             idx = entry.get("item", 1) - 1
             source_item = items[idx] if 0 <= idx < len(items) else {}
             entry["is_primary"] = source_item.get("is_primary", True)
-            pillar_raw = entry.get("PILLAR", "").lower()
-            if "adoption" in pillar_raw:
-                entry["pillar_group"] = "ADOPTION FAILURE"
-            elif "workforce" in pillar_raw:
-                entry["pillar_group"] = "WORKFORCE ANXIETY"
-            elif "governance" in pillar_raw:
-                entry["pillar_group"] = "GOVERNANCE"
-            else:
-                entry["pillar_group"] = "OTHER"
+            entry["url"] = source_item.get("url", "")
             results.append(entry)
 
-        log.info("Batch analysis: %d/%d items relevant", len(results), len(items))
+        log.info("Filter: %d/%d items relevant", len(results), len(items))
         return results
 
     except Exception as exc:
-        log.error("Batch analysis failed: %s", exc)
+        log.error("Filter stage failed: %s", exc)
         return []
 
 
 # ---------------------------------------------------------------------------
-# Email formatting
+# Stage 2: Synthesize across relevant items (Sonnet — quality)
 # ---------------------------------------------------------------------------
 
-PILLAR_ORDER = ["ADOPTION FAILURE", "WORKFORCE ANXIETY", "GOVERNANCE"]
+def synthesize(relevant: list[dict], client: Anthropic) -> str:
+    if not relevant:
+        return ""
+
+    items_text = ""
+    for item in relevant:
+        items_text += (
+            f"Source: {item.get('source', '')}\n"
+            f"Headline: {item.get('headline', '')}\n"
+            f"Pillar: {item.get('pillar', '')}\n"
+            f"Summary: {item.get('summary', '')}\n\n"
+        )
+
+    try:
+        response = client.messages.create(
+            model=config.ANTHROPIC_MODEL,
+            max_tokens=config.MAX_TOKENS,
+            system=SYNTHESIS_PROMPT,
+            messages=[{"role": "user", "content": f"Today's relevant items:\n\n{items_text}"}],
+        )
+        return response.content[0].text.strip()
+    except Exception as exc:
+        log.error("Synthesis failed: %s", exc)
+        return ""
 
 
-def format_email(analyzed: list[dict], run_date: str) -> str:
-    count = len(analyzed)
-    lines = [
-        "GOOD MORNING, DENISE.",
-        "",
-        f"Here's your daily AI briefing. {count} item{'s' if count != 1 else ''} flagged across your three content pillars.",
-        "",
-    ]
+# ---------------------------------------------------------------------------
+# Email formatting — HTML
+# ---------------------------------------------------------------------------
+
+PILLAR_COLORS = {
+    "Adoption failure":  "#7c3aed",
+    "Workforce anxiety": "#2563eb",
+    "Governance":        "#0e7490",
+}
+
+def format_email(relevant: list[dict], synthesis: str, run_date: str) -> str:
+    count = len(relevant)
+
+    def section(title: str, content: str, color: str = "#7b6fa0") -> str:
+        return f"""
+        <tr><td style="padding:24px 32px 0;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:2px;
+                    text-transform:uppercase;color:{color};">{title}</p>
+          <div style="border-left:3px solid {color};padding-left:16px;
+                      color:#d4c8f0;font-size:15px;line-height:1.7;">{content}</div>
+        </td></tr>"""
+
+    def ref_item(item: dict) -> str:
+        pillar = item.get("pillar", "")
+        color = PILLAR_COLORS.get(pillar, "#7b6fa0")
+        src = item.get("source", "")
+        hl = item.get("headline", "")
+        sm = item.get("summary", "")
+        url = item.get("url", "")
+        hl_html = f'<a href="{url}" style="color:#c4b5fd;text-decoration:none;">{hl}</a>' if url else hl
+        return f"""
+        <tr><td style="padding:16px 32px 0;">
+          <div style="background:#1e1535;border-radius:8px;padding:16px 20px;
+                      border-left:3px solid {color};">
+            <p style="margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:1px;
+                      text-transform:uppercase;color:{color};">{pillar} &nbsp;|&nbsp;
+                      <span style="color:#8b7db5;">{src}</span></p>
+            <p style="margin:0 0 8px;font-size:15px;font-weight:600;color:#f0ebff;">{hl_html}</p>
+            <p style="margin:0;font-size:14px;color:#a89ec8;line-height:1.6;">{sm}</p>
+          </div>
+        </td></tr>"""
+
+    # Parse synthesis into sections
+    def extract(text: str, label: str, next_labels: list[str]) -> str:
+        pattern = rf"{re.escape(label)}\s*(.*?)(?={'|'.join(re.escape(l) for l in next_labels)}|$)"
+        m = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+        return m.group(1).strip() if m else ""
+
+    syn_labels = ["TODAY'S THEME", "POST RECOMMENDATION", "REASONING", "DRAFT POST", "REFERENCE ITEMS"]
+    theme     = extract(synthesis, "TODAY'S THEME",       syn_labels[1:])
+    rec_line  = extract(synthesis, "POST RECOMMENDATION:", syn_labels[2:]).strip().upper()
+    if not rec_line:
+        rec_line = extract(synthesis, "POST RECOMMENDATION", syn_labels[2:]).strip().upper()
+    reasoning = extract(synthesis, "REASONING",           syn_labels[3:])
+    draft     = extract(synthesis, "DRAFT POST",          syn_labels[4:])
+    refs      = extract(synthesis, "REFERENCE ITEMS",     [])
+
+    rec_color = {"YES": "#22c55e", "NO": "#ef4444", "HOLD": "#f59e0b"}.get(rec_line[:4].strip(), "#7b6fa0")
+
+    # Build HTML
+    rows = []
+
+    if not synthesis:
+        rows.append(section("No Analysis Available",
+            "The synthesis step did not return output. Check briefing.log.", "#ef4444"))
+    else:
+        if theme:
+            rows.append(section("TODAY'S THEME", theme.replace("\n", "<br>"), "#7b6fa0"))
+
+        rec_display = rec_line if rec_line else "UNKNOWN"
+        rows.append(f"""
+        <tr><td style="padding:24px 32px 0;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:2px;
+                    text-transform:uppercase;color:#7b6fa0;">POST RECOMMENDATION</p>
+          <div style="display:inline-block;background:{rec_color}22;border:1px solid {rec_color};
+                      border-radius:6px;padding:6px 18px;">
+            <span style="font-size:18px;font-weight:800;color:{rec_color};">{rec_display}</span>
+          </div>
+        </td></tr>""")
+
+        if reasoning:
+            rows.append(section("REASONING", reasoning.replace("\n", "<br>"), "#7b6fa0"))
+
+        if draft:
+            draft_html = draft.replace("\n", "<br>")
+            rows.append(f"""
+            <tr><td style="padding:24px 32px 0;">
+              <p style="margin:0 0 8px;font-size:11px;font-weight:700;letter-spacing:2px;
+                        text-transform:uppercase;color:#22c55e;">DRAFT POST</p>
+              <div style="background:#0d2818;border:1px solid #22c55e44;border-radius:8px;
+                          padding:20px 24px;color:#d4f0dc;font-size:15px;line-height:1.8;
+                          font-style:italic;">{draft_html}</div>
+            </td></tr>""")
+
+        if refs:
+            refs_html = "<br>".join(
+                f'<span style="color:#7b6fa0;">&#8250;</span> {line.strip().lstrip("-").strip()}'
+                for line in refs.strip().splitlines() if line.strip()
+            )
+            rows.append(section("REFERENCE ITEMS", refs_html, "#7b6fa0"))
 
     if count == 0:
-        lines += [
-            "Nothing relevant flagged today.",
-            "",
-            "The system ran successfully. No items passed the three-pillar relevance filter.",
-            "",
-        ]
-        lines.append(_footer())
-        return "\n".join(lines)
+        rows.append(section("NO ITEMS FLAGGED",
+            "The system ran successfully. No articles passed the three-pillar relevance filter today.",
+            "#ef4444"))
+    else:
+        rows.append(f"""
+        <tr><td style="padding:24px 32px 0;">
+          <p style="margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:2px;
+                    text-transform:uppercase;color:#7b6fa0;">SOURCE ITEMS ({count})</p>
+        </td></tr>""")
+        for item in relevant:
+            rows.append(ref_item(item))
 
-    grouped: dict[str, list[dict]] = {p: [] for p in PILLAR_ORDER}
-    secondary: list[dict] = []
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#0a0812;font-family:'Segoe UI',Arial,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0812;">
+<tr><td align="center" style="padding:32px 16px;">
+<table width="640" cellpadding="0" cellspacing="0"
+       style="background:#120f1e;border-radius:12px;border:1px solid #2d2548;max-width:640px;">
 
-    for item in analyzed:
-        group = item.get("pillar_group", "OTHER")
-        is_primary = item.get("is_primary", True)
-        if not is_primary:
-            secondary.append(item)
-        elif group in grouped:
-            grouped[group].append(item)
-        else:
-            secondary.append(item)
+  <tr><td style="padding:32px 32px 24px;border-bottom:1px solid #2d2548;">
+    <p style="margin:0 0 4px;font-size:12px;letter-spacing:3px;text-transform:uppercase;
+              color:#7b6fa0;">DT DAILY BRIEFING</p>
+    <h1 style="margin:0;font-size:22px;font-weight:700;color:#f0ebff;">{run_date}</h1>
+    <p style="margin:6px 0 0;font-size:13px;color:#6b5f8a;">
+      {count} item{'s' if count != 1 else ''} flagged across three content pillars</p>
+  </td></tr>
 
-    empty_pillars = []
-    for pillar in PILLAR_ORDER:
-        items_in_pillar = grouped[pillar]
-        if not items_in_pillar:
-            empty_pillars.append(pillar)
-            continue
-        lines.append(pillar)
-        lines.append("-" * len(pillar))
-        for entry in items_in_pillar:
-            lines.append(_format_entry(entry))
-        lines.append("")
+  {"".join(rows)}
 
-    if secondary:
-        lines.append("SECONDARY SOURCE FLAGS")
-        lines.append("----------------------")
-        lines.append("Items from Meta, Apple, or xAI. Same format; lower authority weighting.")
-        lines.append("")
-        for entry in secondary:
-            lines.append(_format_entry(entry))
-        lines.append("")
+  <tr><td style="padding:24px 32px 32px;border-top:1px solid #2d2548;margin-top:24px;">
+    <p style="margin:0;font-size:11px;color:#4a4060;">
+      DT Daily Briefing System. Edit sources and pillars in config.py.</p>
+  </td></tr>
 
-    if empty_pillars:
-        lines.append("Nothing relevant today in: " + ", ".join(empty_pillars))
-        lines.append("")
-
-    lines.append(_footer())
-    return "\n".join(lines)
-
-
-def _format_entry(entry: dict) -> str:
-    def field(label: str) -> str:
-        val = entry.get(label, "").strip()
-        return f"{label}: {val}" if val else ""
-
-    parts = [
-        field("SOURCE"),
-        field("HEADLINE"),
-        field("PILLAR"),
-        field("WHAT IT SAYS"),
-        field("WHY IT MATTERS"),
-        field("DT'S TAKE"),
-        "",
-    ]
-    return "\n".join(p for p in parts if p is not None)
-
-
-def _footer() -> str:
-    return "Built by DT Daily Briefing System. Edit sources and pillars in config.py."
+</table>
+</td></tr>
+</table>
+</body></html>"""
+    return html
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +502,7 @@ def get_gmail_service():
 
 
 def _build_message(subject: str, body: str, recipient: str) -> dict:
-    msg = MIMEText(body, "plain", "utf-8")
+    msg = MIMEText(body, "html", "utf-8")
     msg["To"] = recipient
     msg["Subject"] = subject
     return {"raw": base64.urlsafe_b64encode(msg.as_bytes()).decode()}
@@ -470,14 +551,20 @@ def main() -> None:
     all_items = deduplicate(rss_primary + rss_secondary + search_items)
     log.info("Total items after dedup: %d", len(all_items))
 
-    # 2. Analyze — single batched API call
-    analyzed = analyze_all_items(all_items, client)
-    log.info("Items passing relevance filter: %d", len(analyzed))
+    # 2a. Filter for pillar relevance (Haiku)
+    relevant = filter_items(all_items, client)
+
+    # 2b. Synthesize across relevant items (Sonnet)
+    synthesis = synthesize(relevant, client) if relevant else ""
+    if not synthesis and relevant:
+        log.warning("Synthesis returned empty — sending items without strategic analysis")
 
     # 3. Format & send
-    count = len(analyzed)
-    subject = f"AI Briefing: {run_date} -- {count} item{'s' if count != 1 else ''} flagged"
-    body = format_email(analyzed, run_date)
+    count = len(relevant)
+    rec_match = re.search(r"POST RECOMMENDATION[:\s]+(\w+)", synthesis, re.IGNORECASE)
+    rec = rec_match.group(1).upper() if rec_match else "N/A"
+    subject = f"AI Briefing {run_date} | {count} items | Post: {rec}"
+    body = format_email(relevant, synthesis, run_date)
 
     try:
         gmail = get_gmail_service()
