@@ -1,7 +1,7 @@
 # config.py — Edit this file to customize your daily briefing.
 # Do NOT put secrets here. Secrets go in .env
 
-RECIPIENT_EMAIL = ""  # e.g. "you@gmail.com"
+RECIPIENT_EMAIL = "drdee20200@gmail.com"
 
 SEND_HOUR = 7  # 24-hour format; used only if running as daemon, not via cron
 
