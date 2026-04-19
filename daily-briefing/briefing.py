@@ -190,7 +190,7 @@ def run_web_searches(queries: list[str], client: Anthropic) -> list[dict]:
             log.info("Web search '%s': %d items found", query, len(items))
         except Exception as exc:
             log.error("Web search failed for query '%s': %s", query, exc)
-        time.sleep(5)
+        time.sleep(15)
     return items
 
 

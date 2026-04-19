@@ -24,11 +24,8 @@ RSS_FEEDS_SECONDARY = [
 ]
 
 SEARCH_QUERIES = [
-    "AI workforce impact news today",
-    "enterprise AI adoption research this week",
-    "AI job displacement survey latest",
-    "AI governance policy news today",
-    "AI implementation failure case study recent",
+    "AI workforce impact job displacement news today",
+    "enterprise AI adoption failure governance news this week",
     "OpenAI OR Anthropic OR Google OR Microsoft AI announcement today",
 ]
 
