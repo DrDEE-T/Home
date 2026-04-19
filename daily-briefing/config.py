@@ -32,6 +32,7 @@ SEARCH_QUERIES = [
     "OpenAI OR Anthropic OR Google OR Microsoft AI announcement today",
 ]
 
-ANTHROPIC_MODEL = "claude-sonnet-4-6"
-MAX_TOKENS = 1000
+ANTHROPIC_MODEL = "claude-sonnet-4-6"   # used for web search
+ANALYSIS_MODEL = "claude-haiku-4-5-20251001"  # used for article analysis (cheaper)
+MAX_TOKENS = 4000  # shared budget for the single batch analysis call
 LOOKBACK_HOURS = 24

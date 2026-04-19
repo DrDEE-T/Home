@@ -147,7 +147,7 @@ def run_web_searches(queries: list[str], client: Anthropic) -> list[dict]:
         try:
             response = client.messages.create(
                 model=config.ANTHROPIC_MODEL,
-                max_tokens=2048,
+                max_tokens=1024,
                 tools=[{"type": "web_search_20250305", "name": "web_search"}],
                 messages=[
                     {
@@ -229,55 +229,86 @@ def _title_key(title: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Anthropic analysis
+# Anthropic analysis — single batched call for all items
 # ---------------------------------------------------------------------------
 
-def analyze_item(item: dict, client: Anthropic) -> Optional[dict]:
-    content_block = (
-        f"URL: {item['url']}\n"
-        f"Headline: {item['title']}\n"
-        f"Source: {item['source']}\n\n"
-        f"Content: {item['content'][:3000]}"
-    )
+BATCH_SYSTEM_PROMPT = SYSTEM_PROMPT + """
+
+You will receive multiple numbered news items. Analyze each against the three pillars.
+
+Return ONLY a valid JSON array — no prose, no markdown fences. One object per item in order:
+[
+  {
+    "item": 1,
+    "relevant": true,
+    "SOURCE": "publication name",
+    "HEADLINE": "article headline",
+    "PILLAR": "Adoption failure",
+    "WHAT IT SAYS": "one to two sentences",
+    "WHY IT MATTERS": "one sentence",
+    "ANGLE A": "LinkedIn angle",
+    "ANGLE B": "second angle"
+  },
+  {
+    "item": 2,
+    "relevant": false
+  }
+]
+
+Use exactly one of these pillar values: Adoption failure, Workforce anxiety, Governance."""
+
+
+def analyze_all_items(items: list[dict], client: Anthropic) -> list[dict]:
+    if not items:
+        return []
+
+    numbered = ""
+    for i, item in enumerate(items, 1):
+        numbered += (
+            f"ITEM {i}\n"
+            f"Title: {item['title']}\n"
+            f"Source: {item['source']}\n"
+            f"Content: {item['content'][:600]}\n\n"
+        )
+
     try:
         response = client.messages.create(
-            model=config.ANTHROPIC_MODEL,
+            model=config.ANALYSIS_MODEL,
             max_tokens=config.MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Analyze this news item:\n\n{content_block}"}],
+            system=BATCH_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": f"Analyze these {len(items)} news items:\n\n{numbered}"}],
         )
-        text = response.content[0].text.strip()
-        if text.startswith("NOT_RELEVANT") or not text:
-            log.info("Not relevant: %s", item["title"])
-            return None
-        return _parse_structured_output(text, item)
+        raw = response.content[0].text.strip()
+        parsed = _extract_json_array(raw)
+        if not parsed:
+            log.error("Could not parse batch analysis JSON")
+            return []
+
+        results = []
+        for entry in parsed:
+            if not entry.get("relevant"):
+                log.info("Not relevant: item %d", entry.get("item", "?"))
+                continue
+            idx = entry.get("item", 1) - 1
+            source_item = items[idx] if 0 <= idx < len(items) else {}
+            entry["is_primary"] = source_item.get("is_primary", True)
+            pillar_raw = entry.get("PILLAR", "").lower()
+            if "adoption" in pillar_raw:
+                entry["pillar_group"] = "ADOPTION FAILURE"
+            elif "workforce" in pillar_raw:
+                entry["pillar_group"] = "WORKFORCE ANXIETY"
+            elif "governance" in pillar_raw:
+                entry["pillar_group"] = "GOVERNANCE"
+            else:
+                entry["pillar_group"] = "OTHER"
+            results.append(entry)
+
+        log.info("Batch analysis: %d/%d items relevant", len(results), len(items))
+        return results
+
     except Exception as exc:
-        log.error("Analysis failed for '%s': %s", item["title"], exc)
-        return None
-
-
-def _parse_structured_output(text: str, item: dict) -> Optional[dict]:
-    fields = ["SOURCE", "HEADLINE", "PILLAR", "WHAT IT SAYS", "WHY IT MATTERS", "ANGLE A", "ANGLE B"]
-    result: dict = {"raw": text, "is_primary": item.get("is_primary", True)}
-    for i, field in enumerate(fields):
-        pattern = rf"{re.escape(field)}:\s*(.*?)(?=(?:{'|'.join(re.escape(f) for f in fields[i+1:])}):|$)"
-        match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
-        if match:
-            result[field] = match.group(1).strip()
-
-    pillar_raw = result.get("PILLAR", "").lower()
-    if "adoption" in pillar_raw:
-        result["pillar_group"] = "ADOPTION FAILURE"
-    elif "workforce" in pillar_raw:
-        result["pillar_group"] = "WORKFORCE ANXIETY"
-    elif "governance" in pillar_raw:
-        result["pillar_group"] = "GOVERNANCE"
-    else:
-        result["pillar_group"] = "OTHER"
-
-    if not result.get("HEADLINE") and not result.get("SOURCE"):
-        return None
-    return result
+        log.error("Batch analysis failed: %s", exc)
+        return []
 
 
 # ---------------------------------------------------------------------------
@@ -444,13 +475,8 @@ def main() -> None:
     all_items = deduplicate(rss_primary + rss_secondary + search_items)
     log.info("Total items after dedup: %d", len(all_items))
 
-    # 2. Analyze
-    analyzed: list[dict] = []
-    for item in all_items:
-        result = analyze_item(item, client)
-        if result:
-            analyzed.append(result)
-        time.sleep(3)
+    # 2. Analyze — single batched API call
+    analyzed = analyze_all_items(all_items, client)
     log.info("Items passing relevance filter: %d", len(analyzed))
 
     # 3. Format & send
