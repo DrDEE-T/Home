@@ -190,6 +190,7 @@ def run_web_searches(queries: list[str], client: Anthropic) -> list[dict]:
             log.info("Web search '%s': %d items found", query, len(items))
         except Exception as exc:
             log.error("Web search failed for query '%s': %s", query, exc)
+        time.sleep(5)
     return items
 
 
@@ -219,7 +220,7 @@ def deduplicate(items: list[dict]) -> list[dict]:
         if title_key:
             seen_titles.add(title_key)
         unique.append(item)
-    log.info("Deduplication: %d → %d items", len(items), len(unique))
+    log.info("Deduplication: %d -> %d items", len(items), len(unique))
     return unique
 
 
@@ -449,6 +450,7 @@ def main() -> None:
         result = analyze_item(item, client)
         if result:
             analyzed.append(result)
+        time.sleep(3)
     log.info("Items passing relevance filter: %d", len(analyzed))
 
     # 3. Format & send
