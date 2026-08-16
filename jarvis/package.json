@@ -1,0 +1,15 @@
+{
+  "name": "jarvis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JARVIS: voice/text intake that routes your \"takes\" to a Chief of Staff agent, extracts action items, and tells you what it needs from you.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "dotenv": "^16.4.5"
+  }
+}

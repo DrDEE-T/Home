@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>JARVIS</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; background: #0b0b0d; color: #f4f4f2;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex; justify-content: center; padding: 40px 16px;
+  }
+  main { width: 100%; max-width: 640px; }
+  h1 { font-size: 28px; margin-bottom: 4px; }
+  .sub { color: #9a9a9a; margin-bottom: 28px; }
+  textarea {
+    width: 100%; min-height: 110px; background: #17171a; color: #f4f4f2;
+    border: 1px solid #2c2c30; border-radius: 10px; padding: 14px;
+    font-size: 16px; resize: vertical; box-sizing: border-box;
+  }
+  .row { display: flex; gap: 10px; margin-top: 12px; }
+  button {
+    border: none; border-radius: 8px; padding: 12px 18px; font-size: 15px;
+    font-weight: 600; cursor: pointer;
+  }
+  #sendBtn { background: #f5c518; color: #0b0b0d; flex: 1; }
+  #sendBtn:disabled { opacity: 0.5; cursor: default; }
+  #micBtn { background: #2c2c30; color: #f4f4f2; min-width: 52px; }
+  #micBtn.listening { background: #e5484d; color: white; }
+  #status { margin-top: 8px; font-size: 13px; color: #8a8a8a; min-height: 16px; }
+  #output { margin-top: 28px; display: none; }
+  .card {
+    background: #17171a; border: 1px solid #2c2c30; border-radius: 10px;
+    padding: 18px; margin-bottom: 14px;
+  }
+  .card h2 { margin: 0 0 8px; font-size: 14px; letter-spacing: 0.04em; text-transform: uppercase; color: #f5c518; }
+  .ack { font-size: 17px; line-height: 1.5; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 8px; line-height: 1.4; }
+  .tag { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 5px; margin-right: 6px; }
+  .tag.small { background: #1f3d2b; color: #6bd58a; }
+  .tag.big { background: #3d2323; color: #ff8080; }
+  .question { color: #f5c518; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🤖 JARVIS</h1>
+  <div class="sub">Dictate or type a take. JARVIS pulls out what to do and what needs you.</div>
+
+  <textarea id="takeInput" placeholder="e.g. Just got off the call with the client, they want..."></textarea>
+  <div class="row">
+    <button id="sendBtn">Send to JARVIS</button>
+    <button id="micBtn" title="Speak your take">🎤</button>
+  </div>
+  <div id="status"></div>
+
+  <div id="output">
+    <div class="card">
+      <h2>JARVIS</h2>
+      <div class="ack" id="ackText"></div>
+    </div>
+    <div class="card" id="itemsCard" style="display:none">
+      <h2>Action Items</h2>
+      <ul id="itemsList"></ul>
+    </div>
+    <div class="card question" id="questionCard" style="display:none">
+      <h2>JARVIS needs to know</h2>
+      <div id="questionText"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const takeInput = document.getElementById('takeInput');
+const sendBtn = document.getElementById('sendBtn');
+const micBtn = document.getElementById('micBtn');
+const statusEl = document.getElementById('status');
+const output = document.getElementById('output');
+const ackText = document.getElementById('ackText');
+const itemsCard = document.getElementById('itemsCard');
+const itemsList = document.getElementById('itemsList');
+const questionCard = document.getElementById('questionCard');
+const questionText = document.getElementById('questionText');
+
+async function sendTake() {
+  const take = takeInput.value.trim();
+  if (!take) return;
+
+  sendBtn.disabled = true;
+  statusEl.textContent = 'JARVIS is thinking…';
+  output.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/jarvis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ take }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      statusEl.textContent = data.error || 'Something went wrong.';
+      sendBtn.disabled = false;
+      return;
+    }
+
+    const mood = data.mood ? ' ' + data.mood : '';
+    ackText.textContent = (data.acknowledgment || '') + mood;
+
+    itemsList.innerHTML = '';
+    if (data.action_items && data.action_items.length) {
+      data.action_items.forEach((it) => {
+        const li = document.createElement('li');
+        const tagClass = it.owner === 'BIG' ? 'big' : 'small';
+        li.innerHTML = `<span class="tag ${tagClass}">${it.owner}</span>${it.item}` +
+          (it.note ? ` <span style="color:#8a8a8a">— ${it.note}</span>` : '');
+        itemsList.appendChild(li);
+      });
+      itemsCard.style.display = 'block';
+    } else {
+      itemsCard.style.display = 'none';
+    }
+
+    if (data.clarifying_question) {
+      questionText.textContent = data.clarifying_question;
+      questionCard.style.display = 'block';
+    } else {
+      questionCard.style.display = 'none';
+    }
+
+    output.style.display = 'block';
+    statusEl.textContent = '';
+  } catch (err) {
+    statusEl.textContent = 'Network error: ' + err.message;
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+sendBtn.addEventListener('click', sendTake);
+takeInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendTake();
+});
+
+// Voice input via the browser's built-in speech recognition (Chrome/Edge).
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition) {
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+
+  let listening = false;
+  let baseText = '';
+
+  recognition.onresult = (event) => {
+    let finalText = '';
+    let interimText = '';
+    for (let i = 0; i < event.results.length; i++) {
+      const transcript = event.results[i][0].transcript;
+      if (event.results[i].isFinal) finalText += transcript + ' ';
+      else interimText += transcript;
+    }
+    takeInput.value = (baseText + finalText + interimText).trim();
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    micBtn.classList.remove('listening');
+    statusEl.textContent = '';
+  };
+
+  micBtn.addEventListener('click', () => {
+    if (listening) {
+      recognition.stop();
+      return;
+    }
+    baseText = takeInput.value ? takeInput.value.trim() + ' ' : '';
+    listening = true;
+    micBtn.classList.add('listening');
+    statusEl.textContent = 'Listening…';
+    recognition.start();
+  });
+} else {
+  micBtn.disabled = true;
+  micBtn.title = 'Voice input is not supported in this browser — try Chrome or Edge.';
+}
+</script>
+</body>
+</html>
