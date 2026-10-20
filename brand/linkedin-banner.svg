@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1584" height="396" viewBox="0 0 1584 396">
+  <rect width="1584" height="396" fill="#1c2433"/>
+  <g fill="none" stroke="#a8462a" stroke-width="3" stroke-linecap="round" opacity="0.55">
+    <path d="M60 300 C260 300 330 120 560 120"/>
+    <path d="M60 300 H560"/>
+    <path d="M60 300 C260 300 330 380 560 380"/>
+  </g>
+  <circle cx="60" cy="300" r="12" fill="#a8462a" opacity="0.55"/>
+  <g font-family="Fraunces, Georgia, serif" fill="#f7f3ec">
+    <text x="1500" y="170" text-anchor="end" font-size="54">Technology should expand what's</text>
+    <text x="1500" y="236" text-anchor="end" font-size="54"><tspan fill="#f1ddd2" font-style="italic">possible</tspan> for people.</text>
+  </g>
+  <text x="1500" y="300" text-anchor="end" font-family="Inter, Arial, sans-serif" font-size="22" letter-spacing="3" fill="#c9ced8">DR. DENISE TURLEY  ·  EXECUTIVE  ·  EDUCATOR  ·  AUTHOR</text>
+</svg>

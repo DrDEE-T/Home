@@ -1,129 +1,76 @@
-import React, { useRef } from 'react';
+import React from 'react';
+import { Link } from 'gatsby';
 
-import Container from '../components/Container';
-import Hero from '../components/Hero';
-import ThemeLink from '../components/ThemeLink';
-import Layout from '../components/Layout/Layout';
+import Layout from '../components/Layout';
+import Portrait from '../components/Portrait';
+import Seo from '../components/Seo';
+import { bio, roles } from '../data/site';
 
-import * as styles from './about.module.css';
-import { toOptimizedImage } from '../helpers/general';
-const AboutPage = (props) => {
-  let historyRef = useRef();
-  let valuesRef = useRef();
-  let sustainabilityRef = useRef();
-
-  const handleScroll = (elementReference) => {
-    if (elementReference) {
-      window.scrollTo({
-        behavior: 'smooth',
-        top: elementReference.current.offsetTop - 280,
-      });
-    }
-  };
-
-  return (
-    <Layout disablePaddingBottom>
-      <div className={styles.root}>
-        {/* Hero Container */}
-        <Hero
-          maxWidth={'900px'}
-          image={'/about.png'}
-          title={`Sydney \n A British brand since 1860`}
-        />
-
-        <div className={styles.navContainer}>
-          <ThemeLink onClick={() => handleScroll(historyRef)} to={'#history'}>
-            History
-          </ThemeLink>
-          <ThemeLink onClick={() => handleScroll(valuesRef)} to={'#values'}>
-            Values
-          </ThemeLink>
-          <ThemeLink
-            onClick={() => handleScroll(sustainabilityRef)}
-            to={'#sustainability'}
-          >
-            Sustainability
-          </ThemeLink>
-        </div>
-
-        <Container size={'large'} spacing={'min'}>
-          <div className={styles.detailContainer} ref={historyRef}>
-            <p>
-              Founded in 1860, Sydney is an innovative British brand with a
-              contemporary edge. We make timeless everyday luxury clothing.
-            </p>
-            <br />
-            <br />
-            <p>
-              We created some of the world's first T-shirts and spent decades
-              perfecting the feel of the cotton. Today we are the only brand
-              that makes T-shirts in its own factory in the UK. And we do this
-              in the same factory we have occupied since 1937.
-            </p>
+const AboutPage = () => (
+  <Layout>
+    <section className="hero">
+      <div className="wrap hero-grid">
+        <div>
+          <p className="eyebrow">About</p>
+          <h1>Curiosity, turned into something useful.</h1>
+          <div className="measure">
+            {bio.full.map((para) => (
+              <p key={para.slice(0, 32)}>{para}</p>
+            ))}
           </div>
-        </Container>
-
-        <div className={styles.imageContainer}>
-          <img alt={'shirt brand'} src={toOptimizedImage('/about1.png')}></img>
         </div>
+        <Portrait />
+      </div>
+    </section>
 
-        <Container size={'large'} spacing={'min'}>
-          <div className={styles.content}>
-            <h3>Our Values</h3>
-            <div ref={valuesRef}>
-              <p>
-                Sunspel produced some of the world's earliest T-shirts. In the
-                late 1800s the business made luxury tunics and undershirts from
-                lightweight Sea Island cotton for export to the Far East and
-                other warm climates. While these garments initially had silk
-                buttoned plackets, these were removed in the early 1900s and
-                replaced with simple bound necks to reduce manufacturing costs -
-                creating the T-shirt. We've supplied the world as the T-shirt
-                has evolved from underwear to outerwear, from symbol of youthful
-                rebellion to everyday wardrobe staple, and we've spent decades
-                refining its every last aspect.
-              </p>
-              <ol>
-                <li>Be an ecowear</li>
-                <li>Sophisticated and not mass-produced</li>
-                <li>Only natural materials</li>
-              </ol>
-              <img alt={'founder'} src={toOptimizedImage('/about2.png')}></img>
+    <section className="section section--sand">
+      <div className="wrap">
+        <p className="eyebrow">Many roles, one thread</p>
+        <h2>No single title</h2>
+        <p className="lede">
+          I've never wanted to be defined by one role. Technology is part of
+          what makes it possible to pursue several ambitions at once, and that's
+          a big part of what I want to show people.
+        </p>
+        <div className="grid grid--3" style={{ marginTop: 32 }}>
+          {roles.map((r) => (
+            <div className="card" key={r.title}>
+              <h3>{r.title}</h3>
+              <p>{r.text}</p>
             </div>
-            <h3>Sustainability</h3>
-            <div id={'#sustainability'} ref={sustainabilityRef}>
-              <p>
-                Our founder, Thomas Hill, had both an eye for quality and a
-                desire to innovate. As well as using the finest fibres such as
-                Sea Island cotton, cashmere and silk, he invented his own
-                fabrics. Sunspel continues this commitment to innovation today
-                and our unique fabrics include: Q100 Sea Island cotton, Q82
-                Supima cotton, Q75 warp knit mesh cotton and Q14 warp knit
-                cellular cotton. The technology behind these fabrics remains
-                unchanged today and all Sunspel products use the finest cottons,
-                wools and fibres.
-              </p>
-              <p>
-                Made in Long Eaton, England and crafted from our luxurious long
-                staple Supima cotton for unparalleled softness, comfort and
-                durability, the Sunspel T-shirt has a classic fit and only the
-                most essential details.{' '}
-              </p>
-              <p>
-                With over 100 years spent perfecting fabric, fit and style, the
-                Sunspel Classic T-shirt is recognised as the finest in the
-                world.
-              </p>
-            </div>
-          </div>
-        </Container>
-
-        <div className={styles.imageContainer}>
-          <img alt={'shirt backwards'} src={toOptimizedImage('/about3.png')}></img>
+          ))}
         </div>
       </div>
-    </Layout>
-  );
-};
+    </section>
+
+    <section className="section">
+      <div className="wrap split">
+        <p className="pull">
+          Progress is meaningful when it improves people's lives and gives them
+          more options for their future.
+        </p>
+        <div className="measure">
+          <p>
+            AI is the technology I'm working with today. It won't be the last.
+            The commitment underneath stays the same: start with people and the
+            outcomes they care about, then find the technology that helps.
+          </p>
+          <div className="actions">
+            <Link className="btn" to="/ideas/">
+              Read the ideas
+            </Link>
+            <Link className="btn btn--ghost" to="/media/">
+              Media kit
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  </Layout>
+);
 
 export default AboutPage;
+
+export const Head = () => (
+  <Seo title="About" description={bio.medium} path="/about/" />
+);

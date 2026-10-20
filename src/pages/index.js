@@ -1,148 +1,188 @@
-import * as React from 'react';
+import React from 'react';
+import { Link } from 'gatsby';
 
-import AttributeGrid from '../components/AttributeGrid';
-import Container from '../components/Container';
-import Hero from '../components/Hero';
-import BlogPreviewGrid from '../components/BlogPreviewGrid';
-import Highlight from '../components/Highlight';
-import Layout from '../components/Layout/Layout';
-import ProductCollectionGrid from '../components/ProductCollectionGrid';
-import ProductCardGrid from '../components/ProductCardGrid';
-import Quote from '../components/Quote';
-import Title from '../components/Title';
+import Layout from '../components/Layout';
+import Portrait from '../components/Portrait';
+import Seo from '../components/Seo';
+import {
+  person,
+  brand,
+  links,
+  pillars,
+  audiences,
+  credentials,
+  writing,
+} from '../data/site';
 
-import { generateMockBlogData, generateMockProductData } from '../helpers/mock';
-
-import * as styles from './index.module.css';
-import { Link, navigate } from 'gatsby';
-import { toOptimizedImage } from '../helpers/general';
-
-const IndexPage = () => {
-  const newArrivals = generateMockProductData(3, 'shirt');
-  const blogData = generateMockBlogData(3);
-
-  const goToShop = () => {
-    navigate('/shop');
-  };
-
-  return (
-    <Layout disablePaddingBottom>
-      {/* Hero Container */}
-      <Hero
-        maxWidth={'500px'}
-        image={'/banner1.png'}
-        title={'Essentials for a cold winter'}
-        subtitle={'Discover Autumn Winter 2021'}
-        ctaText={'shop now'}
-        ctaAction={goToShop}
-      />
-
-      {/* Message Container */}
-      <div className={styles.messageContainer}>
-        <p>
-          This is a demonstration of the Sydney theme for verse by{' '}
-          <span className={styles.gold}>matter design.</span>
-        </p>
-        <p>
-          wear by <span className={styles.gold}>sunspel</span> and{' '}
-          <span className={styles.gold}>scotch&soda</span>
-        </p>
+const IndexPage = () => (
+  <Layout>
+    <section className="hero">
+      <div className="wrap hero-grid">
+        <div>
+          <p className="eyebrow">{person.roles.join(' · ')}</p>
+          <h1>
+            Technology should expand what's <em>possible</em> for people.
+          </h1>
+          <p className="lede">{brand.valueProp}</p>
+          <div className="actions">
+            <Link className="btn" to="/ideas/">
+              Explore the ideas
+            </Link>
+            <a className="btn btn--ghost" href={links.linkedin}>
+              Follow on LinkedIn
+            </a>
+          </div>
+        </div>
+        <Portrait />
       </div>
+    </section>
 
-      {/* Collection Container */}
-      <div className={styles.collectionContainer}>
-        <Container size={'large'}>
-          <Title name={'New Collection'} />
-          <ProductCollectionGrid />
-        </Container>
-      </div>
-
-      {/* New Arrivals */}
-      <div className={styles.newArrivalsContainer}>
-        <Container>
-          <Title name={'New Arrivals'} link={'/shop'} textLink={'view all'} />
-          <ProductCardGrid
-            spacing={true}
-            showSlider
-            height={480}
-            columns={3}
-            data={newArrivals}
-          />
-        </Container>
-      </div>
-
-      {/* Highlight  */}
-      <div className={styles.highlightContainer}>
-        <Container size={'large'} fullMobile>
-          <Highlight
-            image={'/highlight.png'}
-            altImage={'highlight image'}
-            miniImage={'/highlightmin.png'}
-            miniImageAlt={'mini highlight image'}
-            title={'Luxury Knitwear'}
-            description={`This soft lambswool jumper is knitted in Scotland, using yarn from one of the world's oldest spinners based in Fife`}
-            textLink={'shop now'}
-            link={'/shop'}
-          />
-        </Container>
-      </div>
-
-      {/* Promotion */}
-      <div className={styles.promotionContainer}>
-        <Hero image={toOptimizedImage('/banner2.png')} title={`-50% off \n All Essentials`} />
-        <div className={styles.linkContainers}>
-          <Link to={'/shop'}>WOMAN</Link>
-          <Link to={'/shop'}>MAN</Link>
+    <section className="section--tight">
+      <div className="wrap">
+        <p className="eyebrow">Past work and appearances</p>
+        <div className="creds">
+          {credentials.map((c) => (
+            <div key={c.label}>
+              <strong>{c.label}</strong>
+              <span>{c.detail}</span>
+            </div>
+          ))}
         </div>
       </div>
+    </section>
 
-      {/* Quote */}
-      <Quote
-        bgColor={'var(--standard-light-grey)'}
-        title={'about Sydney'}
-        quote={
-          '“We believe in two things: the pursuit of quality in everything we do, and looking after one another. Everything else should take care of itself.”'
-        }
-      />
-
-      {/* Blog Grid */}
-      <div className={styles.blogsContainer}>
-        <Container size={'large'}>
-          <Title name={'Journal'} subtitle={'Notes on life and style'} />
-          <BlogPreviewGrid data={blogData} />
-        </Container>
-      </div>
-
-      {/* Promotion */}
-      <div className={styles.sustainableContainer}>
-        <Hero
-          image={toOptimizedImage('/banner3.png')}
-          title={'We are Sustainable'}
-          subtitle={
-            'From caring for our land to supporting our people, discover the steps we’re taking to do more for the world around us.'
-          }
-          ctaText={'read more'}
-          maxWidth={'660px'}
-          ctaStyle={styles.ctaCustomButton}
-        />
-      </div>
-
-      {/* Social Media */}
-      <div className={styles.socialContainer}>
-        <Title
-          name={'Styled by You'}
-          subtitle={'Tag @sydney to be featured.'}
-        />
-        <div className={styles.socialContentGrid}>
-          <img src={toOptimizedImage(`/social/socialMedia1.png`)} alt={'social media 1'} />
-          <img src={toOptimizedImage(`/social/socialMedia2.png`)} alt={'social media 2'} />
-          <img src={toOptimizedImage(`/social/socialMedia3.png`)} alt={'social media 3'} />
-          <img src={toOptimizedImage(`/social/socialMedia4.png`)} alt={'social media 4'} />
+    <section className="section">
+      <div className="wrap split">
+        <p className="pull">What if we could do this better?</p>
+        <div className="measure">
+          <p className="eyebrow">What I believe</p>
+          <p>
+            That question has followed me through more than 20 years of leading
+            business and technology change. The tools have changed many times.
+            What I care about hasn't: people, their lives, and the outcomes that
+            matter to them.
+          </p>
+          <p>
+            Good technology gives people more room to choose. More ways to build
+            skills, earn security, start something new, and spend time on what
+            matters. That's the test I apply to every new tool, including AI.
+          </p>
+          <Link to="/about/">More about me</Link>
         </div>
       </div>
-      <AttributeGrid />
-    </Layout>
-  );
-};
+    </section>
+
+    <section className="section section--sand">
+      <div className="wrap">
+        <p className="eyebrow">What I write and speak about</p>
+        <h2>Three threads, one belief</h2>
+        <div className="grid grid--3" style={{ marginTop: 32 }}>
+          {pillars.map((p, i) => (
+            <Link
+              key={p.id}
+              to={`/ideas/#${p.id}`}
+              className="card"
+              style={{ textDecoration: 'none' }}
+            >
+              <span className="num">0{i + 1}</span>
+              <h3>{p.title}</h3>
+              <p>{p.summary}</p>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section className="section section--ink">
+      <div className="wrap split">
+        <div>
+          <p className="eyebrow">Signature series</p>
+          <h2>{brand.signature}</h2>
+        </div>
+        <div className="measure">
+          <p className="lede">{brand.signatureLine}</p>
+          <p>
+            Demonstrations, honest experiments, and conversations about how
+            people turn new technology into real choices. Some of it will be
+            about work. Some of it will be about the rest of life.
+          </p>
+          <div className="actions">
+            <a
+              className="btn"
+              href={links.linkedinNewsletter || links.linkedin}
+            >
+              Follow the series
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className="section">
+      <div className="wrap">
+        <p className="eyebrow">Who this is for</p>
+        <h2>People building more options for themselves</h2>
+        <div className="grid grid--4" style={{ marginTop: 32 }}>
+          {audiences.map((a) => (
+            <div key={a.title}>
+              <h3>{a.title}</h3>
+              <p>{a.text}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section className="section section--sand">
+      <div className="wrap">
+        <p className="eyebrow">Latest</p>
+        <h2>Writing and video</h2>
+        {writing.length ? (
+          <ul className="list" style={{ marginTop: 24 }}>
+            {writing.slice(0, 4).map((w) => (
+              <li key={w.url}>
+                <p className="meta">
+                  {w.type} · {w.date}
+                </p>
+                <a href={w.url}>
+                  <h3>{w.title}</h3>
+                </a>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="empty" style={{ marginTop: 24 }}>
+            New writing and video will appear here. For now, the best place to
+            follow along is <a href={links.linkedin}>LinkedIn</a>.
+          </div>
+        )}
+      </div>
+    </section>
+
+    <section className="section">
+      <div className="wrap split">
+        <div>
+          <p className="eyebrow">Speaking</p>
+          <h2>{brand.keynoteTitle}</h2>
+        </div>
+        <div className="measure">
+          <p className="lede">{brand.keynoteSubtitle}.</p>
+          <p>
+            Keynotes, fireside chats, and leadership sessions for audiences who
+            want to understand what technology makes possible and how to make it
+            work for people.
+          </p>
+          <div className="actions">
+            <Link className="btn" to="/speaking/">
+              Invite me to speak
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  </Layout>
+);
 
 export default IndexPage;
+
+export const Head = () => <Seo path="/" />;
