@@ -13,15 +13,15 @@ Ask her something only when you can't get it anywhere else. The usual case is a 
 
 All scripts live in `scripts/` next to this file. Use a scratch work folder per video.
 
-1. **Setup** (about 5 s, safe to re-run): `bash scripts/setup.sh`. This installs OpenCV and Vosk and downloads the small English Vosk model from npm, because the model's usual host is blocked in sandboxes.
+1. **Setup** (about 5 s, safe to re-run): `bash scripts/setup.sh`. This installs OpenCV and Vosk and downloads the small English Vosk model from npm, because the model's usual host is blocked in sandboxes. The model is cached in `~/.cache/dt-video`. If you override that with `DT_VIDEO_CACHE`, set it for transcribe.py too.
 2. **Get the video.** Uploads land under `/root/.claude/uploads/...`. Copy the file to `WORK/src.mp4`. If she says the upload is too big, tell her once to export at 720p (QuickTime: File > Export As > 720p; HandBrake: "Fast 720p30"). Output is 720x1280 anyway.
 3. **Transcribe:** `python3 scripts/transcribe.py WORK/src.mp4 WORK`. This prints a transcript split on pauses and writes `words.json` and `pauses.json`.
-4. **Clean the script.** Rewrite the ASR text into the real script with punctuation. Fix "a i" to "AI", split or joined words ("web sites"), and misheard product names. Use context to fix names: what she's demonstrating, the prompt card, and earlier videos. Vosk-small usually gets names like "Claude Code" and "Codex" right, and it is much better than guessing from audio energy. Keep her words. Don't paraphrase, because captions must match what she says.
+4. **Clean the script.** Rewrite the ASR text into the real script with punctuation. Fix "a i" to "AI", split or joined words ("web sites"), and misheard product names. Use context to fix names: what she's demonstrating, the prompt card, and earlier videos. Vosk-small usually gets names like "Claude Code" and "Codex" right, and it is much better than guessing from audio energy. Keep her words, including short openers like "Look." that Vosk heard clearly. Don't paraphrase, because captions must match what she says.
 5. **Write `WORK/plan.json`.** See `references/plan_schema.md` for every field, and copy `examples/cybersecurity_plan.json` as the starting point. Anchor every time to a phrase from the script ("at": "this prompt") instead of seconds, so timing follows her speech automatically.
-6. **Check layout fast:** `python3 scripts/render.py WORK/plan.json --stills 0.5 <one time per beat> <mid-takeover> <end>`. Tile the stills (`ffmpeg ... -vf scale=216:-1,tile=5x2`) and look at them. Fix overlaps, text that is too long, or a card that's too tall before the full render.
-7. **Render:** `python3 scripts/render.py WORK/plan.json`. This takes about 5 minutes for 50 s of video, so run it in the background if it's long. It writes `final.mp4`, `qa_sheet.jpg` and `qa_report.txt`.
+6. **Check layout fast:** `python3 scripts/render.py WORK/plan.json --stills 0.5 <one time per beat> <mid-takeover> <end>`. This also prints the resolved timeline and runs every QA check, so fix any `FAIL` here, not after a 5-minute render. Tile the stills (`ffmpeg ... -vf scale=216:-1,tile=5x2`) and look at them. Pick still times about 2 s into each beat, so the animations have played.
+7. **Render:** set `"output"` in the plan to a meaningful name (`WORK/<Topic>_edit_v1.mp4`, then bump the version on re-edits), then run `python3 scripts/render.py WORK/plan.json`. This takes about 5 minutes for 50 s of video, so run it in the background if it's long. It writes `final.mp4`, `qa_sheet.jpg` and `qa_report.txt`.
 8. **QA yourself.** Read `qa_report.txt`. Any `FAIL` line is yours to fix: adjust the plan and re-render. Look at `qa_sheet.jpg` for anything the checks can't see: a card covering her face, a cut that looks odd, text that's hard to read.
-9. **Deliver.** Rename the file to something meaningful (`<Topic>_edit_v1.mp4`) and send it with SendUserFile. Then write a short summary in her voice preferences: no em dashes, no hype, plain and direct. Cover what's on screen and when. Mention any judgment call worth knowing about, such as a product name you inferred from context.
+9. **Deliver.** Send the output file with SendUserFile. Then write a short summary in her voice preferences: no em dashes, no hype, plain and direct. Cover what's on screen and when. Mention any judgment call worth knowing about, such as a product name you inferred from context.
 
 ## Editing decisions (what good looks like)
 
@@ -38,6 +38,13 @@ All scripts live in `scripts/` next to this file. Use a scratch work folder per 
 **End card.** "Always assume / I used AI." with her name and the AI disclosure. Keep it on for AI-twin videos. Set `"end_card": null` only if she says the video isn't AI-generated.
 
 **Sound.** Her audio is never altered. Whooshes, the bust-through impact and the shutter click are synthesized and mixed low.
+
+## Defaults (decide these yourself, don't ask)
+
+- Takeover label in caps ("SCREENSHOT THIS") whatever case she typed. Add a short title naming the tool she mentions ("Paste into Claude Code or Codex") and the "Pause and grab it" hint.
+- Her prompt text goes on the card word for word. Don't edit it.
+- The end card stays on. Her talking-head videos are AI twins unless she says otherwise.
+- Invented example names (files, contacts, numbers) are fine. Cards are labeled "Example data".
 
 ## Re-edits
 

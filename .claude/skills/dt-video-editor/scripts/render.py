@@ -670,6 +670,14 @@ def qa_report():
     lines.insert(0, 'QA PASS' if ok else 'QA ISSUES FOUND')
     return '\n'.join(lines)
 
+def timeline():
+    out = ['resolved timeline:']
+    if HOOK: out.append(f'  hook        0.00-{HOOK_E:6.2f}')
+    for b in BEATS: out.append(f"  beat     {b['_s']:6.2f}-{b['_e']:6.2f}  {b.get('headline', '')}")
+    if TK: out.append(f'  takeover {TK_S:6.2f}-{TK_E:6.2f}')
+    out.append(f'  end card {END_START:6.2f}-{TOTAL:6.2f}')
+    return '\n'.join(out)
+
 # ---------------------------------------------------------------- main
 def main():
     cap = cv2.VideoCapture(SRC); src_fps = cap.get(cv2.CAP_PROP_FPS) or 30
@@ -679,7 +687,7 @@ def main():
         for t in want:
             cap.set(cv2.CAP_PROP_POS_FRAMES, int(min(t, SRC_DUR - 0.05) * src_fps)); ok, fr = cap.read()
             Image.fromarray(compose(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB), t)).save(os.path.join(WORK, f'still_{t:05.2f}.png'))
-        print('stills written'); return
+        print('stills written\n'); print(timeline()); print(qa_report()); return
     vid = os.path.join(WORK, '_video_only.mp4')
     ff = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}', '-r', str(FPS), '-i', '-',
                            '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-pix_fmt', 'yuv420p', vid], stdin=subprocess.PIPE)

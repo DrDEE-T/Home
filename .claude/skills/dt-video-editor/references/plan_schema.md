@@ -56,7 +56,7 @@ Tile icons are drawn for: website, login/lock/security, forms/docs/drive/notes, 
 ```
 Colors: `yellow`, `rose`, `ink`, `gray`, `green`, `red`, or `[r,g,b]`.
 
-Keep cards to about 4 rows. QA fails a card that runs into the captions (taller than about 265 px).
+Card height budget is about 265 px (QA fails anything taller, since it runs into the captions). The title uses 54 px, a subtitle 22, and a pill 40. Rows: counter 76, bars 82, typing 48, toggle 42, chips 40, check 38, field 38, file 36, type_text 28, text about 22 per line, pending 38+ (it wraps). Example: title + counter + pill fits; title + subtitle + counter + bars + pill does not.
 
 | row `type` | fields | what it does |
 |---|---|---|
